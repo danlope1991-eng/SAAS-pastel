@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vitejs/plugin-vue": "^6.0.6",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.469.0",
@@ -19,8 +18,8 @@
     "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react-oxc": "^0.4.3",
-    "vite": "^8.0.9"
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^7.3.2"
   },
   "overrides": {
     "serialize-javascript": "^7.0.5"

@@ -200,8 +200,8 @@ select option { background: #1a1030; color: var(--text-main); }
   border: 1px solid rgba(139, 92, 246, 0.25);
   animation: modalIn 0.25s ease;
   position: relative;
-  /* Scroll interno del contenido largo */
-  max-height: calc(100vh - 3rem);
+  /* Scroll interno del contenido largo. 100% respeta el padding del flex container padre */
+  max-height: 100%;
   overflow-y: auto;
   /* Scrollbar elegante dentro del modal */
   scrollbar-width: thin;
@@ -303,7 +303,7 @@ select option { background: #1a1030; color: var(--text-main); }
   .modal-content {
     padding: 1.25rem;
     border-radius: 16px;
-    max-height: calc(100vh - 2rem);
+    max-height: 100%;
   }
 }
 

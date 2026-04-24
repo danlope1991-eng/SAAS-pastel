@@ -296,14 +296,14 @@ select option { background: #1a1030; color: var(--text-main); }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .bottom-nav { display: block; }
   .modal-overlay {
-    align-items: center;
-    padding: 1rem;
+    align-items: flex-start;
+    padding: 4rem 1rem 1.5rem 1rem; /* Más padding arriba para empujarlo hacia abajo */
   }
   .modal-content {
     padding: 1.25rem;
     border-radius: 16px;
-    max-height: calc(100vh - 2rem);
-    max-height: calc(100dvh - 2rem);
+    max-height: calc(100vh - 5.5rem);
+    max-height: calc(100dvh - 5.5rem);
   }
 }
 

@@ -184,11 +184,10 @@ select option { background: #1a1030; color: var(--text-main); }
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
-  align-items: flex-start;   /* flex-start evita que modales largos se corten arriba */
+  align-items: center;       /* Centra el modal verticalmente */
   justify-content: center;
   z-index: 1000;
-  padding: 20px 1.5rem;      /* padding-top mínimo de 20px para "aire" superior */
-  overflow-y: auto;          /* scroll en el overlay si el modal excede la pantalla */
+  padding: 1rem;             /* Padding para asegurar que no toque los bordes de la pantalla */
 }
 .modal-content {
   background: linear-gradient(145deg, #1e1435, #150e28);
@@ -200,9 +199,9 @@ select option { background: #1a1030; color: var(--text-main); }
   border: 1px solid rgba(139, 92, 246, 0.25);
   animation: modalIn 0.25s ease;
   position: relative;
-  max-height: 90vh;          /* Nunca crece más del 90% del viewport */
-  overflow-y: auto;          /* Scroll interno si el contenido no cabe */
-  margin: auto 0;            /* Centra verticalmente dentro del flex-start */
+  max-height: calc(100vh - 2rem); /* Fallback para navegadores antiguos */
+  max-height: calc(100dvh - 2rem); /* Ajuste dinámico perfecto para móviles */
+  overflow-y: auto;          /* Scroll interno si el contenido es más alto que la pantalla */
   /* Scrollbar elegante dentro del modal */
   scrollbar-width: thin;
   scrollbar-color: rgba(139,92,246,0.4) transparent;
@@ -297,14 +296,14 @@ select option { background: #1a1030; color: var(--text-main); }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .bottom-nav { display: block; }
   .modal-overlay {
-    align-items: flex-start;
-    padding: 20px 0.75rem;
-    overflow-y: auto;
+    align-items: center;
+    padding: 1rem;
   }
   .modal-content {
     padding: 1.25rem;
     border-radius: 16px;
-    max-height: 90vh;
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
   }
 }
 

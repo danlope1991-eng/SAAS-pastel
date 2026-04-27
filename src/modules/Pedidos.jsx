@@ -264,19 +264,23 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
           return (
             <div key={order.id} className="order-card animate-fade-in" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Header row: Status and Date/Time */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.5px' }}>{order.customer}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.5px' }}>
+                    <span>{order.customer}</span>
+                    {order.phone && <span style={{ fontSize: '1.05rem', fontWeight: 600 }}><Phone size={16} style={{ verticalAlign: 'text-bottom', marginRight: '2px' }} />{order.phone}</span>}
+                  </div>
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.95rem', color: 'var(--text-muted)' }}>
-                    {order.phone && <span><Phone size={14} style={{ verticalAlign: 'text-bottom' }} /> {order.phone}</span>}
                     {order.location && <span><MapPin size={14} style={{ verticalAlign: 'text-bottom' }} /> {order.location}</span>}
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                   {getBadge(order.status)}
-                  <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)', textShadow: '0px 1px 2px rgba(0,0,0,0.15)', padding: '0.3rem 0.6rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <Clock size={16} style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} /> {order.date} {order.time}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '1.15rem', fontWeight: 700, textShadow: '0px 1px 2px rgba(0,0,0,0.15)', padding: '0.3rem 0.6rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <Clock size={16} style={{ color: 'var(--primary)', verticalAlign: 'text-bottom' }} />
+                    <span style={{ color: 'var(--primary)' }}>{order.date}</span>
+                    <span style={{ color: 'var(--warning)' }}>{order.time}</span>
+                  </div>
                 </div>
               </div>
 

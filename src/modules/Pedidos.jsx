@@ -132,20 +132,36 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
     });
 
   const generatePDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF('landscape');
+    doc.setFontSize(18);
     doc.text('Reporte de Pedidos', 14, 15);
     
-    const tableColumn = ["Cliente", "Fecha", "Hora", "Detalles", "Total", "Status"];
+    const tableColumn = ["Cliente / Tel", "Fecha y Hora", "Ubicación", "Detalles / Receta", "Estatus", "Finanzas"];
     const tableRows = [];
 
     filtered.forEach(order => {
+      const recipe = recipes.find(r => r.id === order.recipeId);
+      const recipeStr = recipe ? `Receta: ${recipe.name}` : 'Personalizado';
+      const detailsStr = order.details ? `${order.details}\n[${recipeStr}]` : `[${recipeStr}]`;
+      
+      let financialStr = `Precio: $${Number(order.totalPrice || 0).toFixed(2)}`;
+      if (Number(order.advanceAmount) > 0) {
+        financialStr += `\nAnticipo: $${Number(order.advanceAmount).toFixed(2)}`;
+      }
+      if (order.status === 'delivered') {
+        financialStr += `\nTotal Final: $${Number(order.finalTotal || 0).toFixed(2)}`;
+      } else {
+        const remaining = Math.max(0, Number(order.totalPrice || 0) - Number(order.advanceAmount || 0));
+        financialStr += `\nFalta: $${remaining.toFixed(2)}`;
+      }
+
       const orderData = [
-        order.customer,
-        order.date || '',
-        order.time || '',
-        order.details || '',
-        `$${Number(order.totalPrice || order.finalTotal || 0).toFixed(2)}`,
-        order.status === 'delivered' ? 'Entregado' : order.status === 'cancelled' ? 'Cancelado' : 'Pendiente'
+        `${order.customer}\n${order.phone || ''}`,
+        `${order.date || ''}  ${order.time || ''}`,
+        order.location || '-',
+        detailsStr,
+        order.status === 'delivered' ? 'Entregado' : order.status === 'cancelled' ? 'Cancelado' : 'Pendiente',
+        financialStr
       ];
       tableRows.push(orderData);
     });
@@ -154,6 +170,16 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
       head: [tableColumn],
       body: tableRows,
       startY: 20,
+      styles: { fontSize: 10, cellPadding: 4, valign: 'middle' },
+      headStyles: { fillColor: [139, 92, 246], fontSize: 11 },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 45 },
+        3: { cellWidth: 'auto' },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 40 },
+      }
     });
     
     doc.save(`pedidos_${new Date().toISOString().substring(0,10)}.pdf`);
@@ -199,10 +225,21 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
           <Search size={18} className="search-icon" />
           <input type="text" placeholder="Buscar por cliente o detalle..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flex: '1 1 200px' }}>
-          <input type="number" placeholder="Día" value={filterDay} onChange={e => setFilterDay(e.target.value)} style={{ width: '60px', padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }} />
-          <input type="number" placeholder="Mes" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} style={{ width: '60px', padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }} />
-          <input type="number" placeholder="Año" value={filterYear} onChange={e => setFilterYear(e.target.value)} style={{ width: '80px', padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }} />
+        <div style={{ display: 'flex', gap: '0.5rem', flex: '1 1 250px' }}>
+          <select value={filterDay} onChange={e => setFilterDay(e.target.value)} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }}>
+            <option value="">Día</option>
+            {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1).padStart(2, '0')}>{i + 1}</option>)}
+          </select>
+          <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }}>
+            <option value="">Mes</option>
+            {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
+              <option key={i + 1} value={String(i + 1).padStart(2, '0')}>{m}</option>
+            ))}
+          </select>
+          <select value={filterYear} onChange={e => setFilterYear(e.target.value)} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }}>
+            <option value="">Año</option>
+            {[2024, 2025, 2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
       </div>
 
@@ -225,39 +262,55 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
         filtered.map(order => {
           const recipe = recipes.find(r => r.id === order.recipeId);
           return (
-            <div key={order.id} className="order-card animate-fade-in">
-              <div className="order-header">
-                <div>
-                  <div className="order-name">{order.customer}</div>
-                  <div className="order-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                    {order.phone && <span><Phone size={13} style={{ verticalAlign: 'text-bottom' }} /> {order.phone}</span>}
-                    {order.location && <span><MapPin size={13} style={{ verticalAlign: 'text-bottom' }} /> {order.location}</span>}
-                    <span style={{ fontSize: '1.05rem', fontWeight: 'bold', color: 'var(--text-main)', textShadow: '0px 1px 2px rgba(0,0,0,0.2)', padding: '0.2rem 0.5rem', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '6px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                      <Clock size={15} style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} /> {order.date} {order.time}
-                    </span>
-                    {recipe && <span>📖 {recipe.name}</span>}
+            <div key={order.id} className="order-card animate-fade-in" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Header row: Status and Date/Time */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.5px' }}>{order.customer}</div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+                    {order.phone && <span><Phone size={14} style={{ verticalAlign: 'text-bottom' }} /> {order.phone}</span>}
+                    {order.location && <span><MapPin size={14} style={{ verticalAlign: 'text-bottom' }} /> {order.location}</span>}
                   </div>
                 </div>
-                {getBadge(order.status)}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                  {getBadge(order.status)}
+                  <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)', textShadow: '0px 1px 2px rgba(0,0,0,0.15)', padding: '0.3rem 0.6rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <Clock size={16} style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} /> {order.date} {order.time}
+                  </span>
+                </div>
               </div>
 
-              {order.details && (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem', lineHeight: 1.4 }}>
-                  {order.details}
-                </p>
-              )}
+              {/* Details & Recipe row */}
+              <div style={{ background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                {recipe && <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.3rem' }}>📖 {recipe.name}</div>}
+                {order.details ? (
+                  <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>{order.details}</p>
+                ) : (
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', opacity: 0.7, margin: 0 }}>Sin detalles adicionales</p>
+                )}
+              </div>
 
               {/* Financial info */}
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem', flexWrap: 'wrap' }}>
-                {order.totalPrice && <span style={{ color: 'var(--info)' }}><DollarSign size={13} style={{ verticalAlign: 'text-bottom' }} /> Precio: ${Number(order.totalPrice).toFixed(2)}</span>}
-                {Number(order.advanceAmount) > 0 && <span className="badge badge-advance">Anticipo: ${Number(order.advanceAmount).toFixed(2)}</span>}
-                {order.status === 'delivered' && <span style={{ color: 'var(--success)', fontWeight: 700 }}>Total Final: ${Number(order.finalTotal).toFixed(2)}</span>}
-                {order.status === 'delivered' && Number(order.remaining) > 0 && <span style={{ color: 'var(--warning)' }}>Restante: ${Number(order.remaining).toFixed(2)}</span>}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: 'rgba(59,130,246,0.05)', padding: '0.75rem', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.95rem', flexWrap: 'wrap' }}>
+                  {order.totalPrice && <span style={{ color: 'var(--info)', fontWeight: 600 }}><DollarSign size={14} style={{ verticalAlign: 'text-bottom' }} /> Precio: ${Number(order.totalPrice).toFixed(2)}</span>}
+                  {Number(order.advanceAmount) > 0 && <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Anticipo: ${Number(order.advanceAmount).toFixed(2)}</span>}
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.95rem', flexWrap: 'wrap', textAlign: 'right' }}>
+                  {order.status === 'delivered' ? (
+                    <>
+                      <span style={{ color: 'var(--success)', fontWeight: 700 }}>Total: ${Number(order.finalTotal).toFixed(2)}</span>
+                      {Number(order.remaining) > 0 && <span style={{ color: 'var(--warning)', fontWeight: 700 }}>Restó: ${Number(order.remaining).toFixed(2)}</span>}
+                    </>
+                  ) : (
+                    <span style={{ color: 'var(--warning)', fontWeight: 700 }}>Falta: ${Math.max(0, Number(order.totalPrice || 0) - Number(order.advanceAmount || 0)).toFixed(2)}</span>
+                  )}
+                </div>
               </div>
 
               {/* Actions */}
               {order.status === 'pending' && (
-                <div className="order-actions">
+                <div className="order-actions" style={{ marginTop: '0.5rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
                   <button className="btn btn-sm btn-ghost" onClick={() => openEdit(order)}><Edit2 size={14} /> Editar</button>
                   <button className="btn btn-sm btn-success" onClick={() => openDeliver(order)}><Check size={14} /> Entregar</button>
                   <button className="btn btn-sm btn-ghost" style={{ color: 'var(--warning)' }} onClick={() => cancelOrder(order.id)}><X size={14} /> Cancelar</button>

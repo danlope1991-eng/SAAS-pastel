@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, X, Check, Phone, MapPin, Clock, DollarSign, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Check, Phone, MapPin, Clock, DollarSign, Search, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function PedidosModule({ orders, setOrders, recipes, supplies, setSupplies, sales, setSales }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -7,6 +9,9 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
   const [editing, setEditing] = useState(null);
   const [filter, setFilter] = useState('pending');
   const [search, setSearch] = useState('');
+  const [filterDay, setFilterDay] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
   const blank = { customer: '', phone: '', details: '', location: '', date: '', time: '', recipeId: '', customIngredients: [], advanceAmount: '', totalPrice: '' };
   const [form, setForm] = useState(blank);
   const [deliverForm, setDeliverForm] = useState({ finalTotal: '', paymentMethod: 'Efectivo' });
@@ -107,11 +112,52 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
   const filtered = orders
     .filter(o => filter === 'all' || o.status === filter)
     .filter(o => !search || o.customer.toLowerCase().includes(search.toLowerCase()) || (o.details || '').toLowerCase().includes(search.toLowerCase()))
+    .filter(o => {
+      if (!o.date) return true;
+      const [y, m, d] = o.date.split('-');
+      if (filterYear && y !== filterYear) return false;
+      if (filterMonth && m !== filterMonth.padStart(2, '0')) return false;
+      if (filterDay && d !== filterDay.padStart(2, '0')) return false;
+      return true;
+    })
     .sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      const dateA = a.date || a.createdAt?.substring(0, 10) || '';
+      const dateB = b.date || b.createdAt?.substring(0, 10) || '';
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA); // Descendente (más actual a más lejana)
+      }
+      const timeA = a.time || '00:00';
+      const timeB = b.time || '00:00';
+      return timeA.localeCompare(timeB); // Ascendente (AM a PM)
     });
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    doc.text('Reporte de Pedidos', 14, 15);
+    
+    const tableColumn = ["Cliente", "Fecha", "Hora", "Detalles", "Total", "Status"];
+    const tableRows = [];
+
+    filtered.forEach(order => {
+      const orderData = [
+        order.customer,
+        order.date || '',
+        order.time || '',
+        order.details || '',
+        `$${Number(order.totalPrice || order.finalTotal || 0).toFixed(2)}`,
+        order.status === 'delivered' ? 'Entregado' : order.status === 'cancelled' ? 'Cancelado' : 'Pendiente'
+      ];
+      tableRows.push(orderData);
+    });
+
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+    });
+    
+    doc.save(`pedidos_${new Date().toISOString().substring(0,10)}.pdf`);
+  };
 
   const counts = { all: orders.length, pending: 0, delivered: 0, cancelled: 0 };
   orders.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
@@ -142,12 +188,22 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
         <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
           <Plus size={18} /> Nuevo Pedido
         </button>
+        <button className="btn btn-ghost" onClick={generatePDF} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid var(--border)' }}>
+          <FileText size={18} /> Generar PDF
+        </button>
       </div>
 
-      {/* Search */}
-      <div className="search-wrap">
-        <Search size={18} className="search-icon" />
-        <input type="text" placeholder="Buscar por cliente o detalle..." value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Filters & Search */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        <div className="search-wrap" style={{ flex: '1 1 250px', margin: 0 }}>
+          <Search size={18} className="search-icon" />
+          <input type="text" placeholder="Buscar por cliente o detalle..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flex: '1 1 200px' }}>
+          <input type="number" placeholder="Día" value={filterDay} onChange={e => setFilterDay(e.target.value)} style={{ width: '60px', padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }} />
+          <input type="number" placeholder="Mes" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} style={{ width: '60px', padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }} />
+          <input type="number" placeholder="Año" value={filterYear} onChange={e => setFilterYear(e.target.value)} style={{ width: '80px', padding: '0.6rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }} />
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -173,10 +229,12 @@ export default function PedidosModule({ orders, setOrders, recipes, supplies, se
               <div className="order-header">
                 <div>
                   <div className="order-name">{order.customer}</div>
-                  <div className="order-meta">
+                  <div className="order-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
                     {order.phone && <span><Phone size={13} style={{ verticalAlign: 'text-bottom' }} /> {order.phone}</span>}
                     {order.location && <span><MapPin size={13} style={{ verticalAlign: 'text-bottom' }} /> {order.location}</span>}
-                    <span><Clock size={13} style={{ verticalAlign: 'text-bottom' }} /> {order.date} {order.time}</span>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 'bold', color: 'var(--text-main)', textShadow: '0px 1px 2px rgba(0,0,0,0.2)', padding: '0.2rem 0.5rem', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '6px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                      <Clock size={15} style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} /> {order.date} {order.time}
+                    </span>
                     {recipe && <span>📖 {recipe.name}</span>}
                   </div>
                 </div>
